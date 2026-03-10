@@ -1,10 +1,17 @@
 import { ScrapedPage } from '../core/scraper';
 
+export interface BrandVariant {
+    name: string;
+    locale?: string;
+    host?: string;
+}
+
 export interface BrandIdentity {
     name: string;
     logoUrl?: string;
     socialLinks: string[];
     colors?: string[]; // Todo: Extract from CSS
+    variants: BrandVariant[];
 }
 
 export class IdentityExtractor {
@@ -21,11 +28,23 @@ export class IdentityExtractor {
             img.alt.toLowerCase().includes('logo')
         );
 
+        const variants: BrandVariant[] = [];
+        const host = new URL(page.url).hostname.replace('www.', '');
+        const localeCandidate = host.split('.').slice(-1)[0];
+        const locale = localeCandidate && localeCandidate.length <= 4 ? localeCandidate : undefined;
+
+        variants.push({
+            name,
+            locale,
+            host
+        });
+
         return {
             name,
             logoUrl: logoCandidate?.src,
             socialLinks: page.socialLinks,
-            colors: []
+            colors: [],
+            variants
         };
     }
 }

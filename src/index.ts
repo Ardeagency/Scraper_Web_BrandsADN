@@ -3,25 +3,26 @@ import { IdentityExtractor } from './extractors/identity';
 import { LLMService } from './core/llm';
 import { DataMapper } from './core/mapper';
 import { supabase } from './core/database';
+import { OrganizationService } from './core/organization';
 
 async function main() {
     const url = process.argv[2];
-    const userId = process.argv[3]; // Allow passing userId as 2nd arg
+    const userId = process.argv[3];
+    const organizationName = process.argv[4];
+    const plan = process.argv[5] || 'starter';
 
-    if (!url) {
-        console.error('Please provide a URL to scrape');
-        console.error('Usage: npm start -- <url> [user_id]');
+    if (!url || !userId || !organizationName) {
+        console.error('Usage: npm start -- <url> <user_id> <organization_name> [plan]');
         process.exit(1);
     }
 
     console.log(`Starting scraper for: ${url}`);
-    if (!userId) {
-        console.warn('No user_id provided. DB insertion might fail if foreign keys are enforced.');
-    }
+    console.log(`Organization: ${organizationName} (plan: ${plan})`);
 
     const scraper = new ScraperEngine();
     const llmService = new LLMService();
     const mapper = new DataMapper(supabase);
+    const orgService = new OrganizationService(supabase);
 
     try {
         await scraper.init();
@@ -50,12 +51,9 @@ async function main() {
         // Save to DB
         console.log('\n--- Saving to Database ---');
         try {
-            if (!userId) {
-                console.log('Skipping DB insertion because no user_id was provided.');
-            } else {
-                const containerId = await mapper.saveBrandData(userId, url, identity, analysis);
-                console.log(`Successfully saved data! Container ID: ${containerId}`);
-            }
+            const { organizationId } = await orgService.ensureOrganization(userId, organizationName, plan);
+            const containerId = await mapper.saveBrandData(organizationId, userId, url, identity, analysis);
+            console.log(`Successfully saved data! Container ID: ${containerId}`);
         } catch (e: any) {
             console.error('Failed to save to DB:', e.message);
         }

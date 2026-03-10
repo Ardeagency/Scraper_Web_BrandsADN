@@ -30,15 +30,15 @@ This system automates the extraction of brand identity and strategy from a given
 
 ## Usage
 
-Run the scraper with a URL and an optional User ID (required for DB insertion):
+Run the scraper with a URL, user ID, organization name and optional plan:
 
 ```bash
-npm start -- <url> <user_id>
+npm start -- <url> <user_id> <organization_name> [plan]
 ```
 
 Example:
 ```bash
-npm start -- https://www.ostercolombia.com/ "user-uuid-here"
+npm start -- https://www.ostercolombia.com/ "user-uuid-here" "Oster LATAM" pro
 ```
 
 ## Project Structure
