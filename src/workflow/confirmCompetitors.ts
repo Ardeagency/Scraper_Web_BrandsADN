@@ -1,5 +1,5 @@
 import { supabase } from '../core/database';
-import { CompetitorSuggestion } from '../types/intelligence';
+import { CompetitorSuggestion, CompetitorConfirmationInput } from '../types/intelligence';
 
 export interface ManualCompetitor {
     name: string;
@@ -10,9 +10,9 @@ export interface ConfirmCompetitorsPayload {
     brandContainerId: string;
     organizationId?: string | null;
     userId: string;
-    approved?: CompetitorSuggestion[];
+    approved?: CompetitorConfirmationInput[];
     manualAdds?: ManualCompetitor[];
-    rejected?: CompetitorSuggestion[];
+    rejected?: CompetitorConfirmationInput[];
     skip?: boolean;
 }
 

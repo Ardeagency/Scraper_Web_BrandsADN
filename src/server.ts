@@ -19,7 +19,7 @@ const scrapeSchema = z.object({
     organizationName: z.string().min(1),
     plan: z.string().optional(),
     environment: z.string().optional(),
-    organizationInput: z.record(z.any()).optional()
+    organizationInput: z.record(z.string(), z.any()).optional()
 });
 
 const confirmSchema = z.object({
