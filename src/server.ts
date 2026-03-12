@@ -3,6 +3,7 @@ import cors from 'cors';
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import { runScraper } from './workflow/runScraper';
+import { CompetitorConfirmationService } from './workflow/confirmCompetitors';
 
 dotenv.config();
 
@@ -18,7 +19,34 @@ const scrapeSchema = z.object({
     organizationName: z.string().min(1),
     plan: z.string().optional(),
     environment: z.string().optional(),
-    organizationInput: z.record(z.string(), z.any()).optional()
+    organizationInput: z.record(z.any()).optional()
+});
+
+const confirmSchema = z.object({
+    userId: z.string().min(1),
+    brandContainerId: z.string().uuid(),
+    organizationId: z.string().uuid().optional(),
+    approved: z.array(z.object({
+        name: z.string().min(1),
+        url: z.string().url(),
+        source: z.string().optional(),
+        reason: z.string().optional(),
+        confidence: z.number().min(0).max(1).optional(),
+        detectedBy: z.string().optional()
+    })).optional(),
+    rejected: z.array(z.object({
+        name: z.string().min(1),
+        url: z.string().url(),
+        source: z.string().optional(),
+        reason: z.string().optional(),
+        confidence: z.number().min(0).max(1).optional(),
+        detectedBy: z.string().optional()
+    })).optional(),
+    manualAdds: z.array(z.object({
+        name: z.string().min(1),
+        url: z.string().url()
+    })).optional(),
+    skip: z.boolean().optional()
 });
 
 app.get('/health', (_req, res) => {
@@ -47,6 +75,25 @@ app.post('/scrape', async (req, res) => {
         res.json(response);
     } catch (error) {
         console.error('Server scrape error:', error);
+        res.status(500).json({ error: 'internal_error' });
+    }
+});
+
+app.post('/competitors/confirm', async (req, res) => {
+    const parsed = confirmSchema.safeParse(req.body);
+    if (!parsed.success) {
+        return res.status(400).json({
+            error: 'invalid_payload',
+            details: parsed.error.flatten()
+        });
+    }
+
+    try {
+        const service = new CompetitorConfirmationService();
+        const response = await service.confirm(parsed.data);
+        res.json(response);
+    } catch (error) {
+        console.error('Competitor confirm error:', error);
         res.status(500).json({ error: 'internal_error' });
     }
 });

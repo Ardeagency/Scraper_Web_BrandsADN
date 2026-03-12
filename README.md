@@ -92,3 +92,22 @@ POST `http://localhost:4000/scrape` with JSON body:
 
 The response is the same `ScraperResponse` payload shown arriba, listo para que el frontend pregunte “¿Esta es tu competencia?” y luego confirme la selección.
 ```
+
+
+### Confirmar competencia
+Una vez el usuario aprueba/edita la lista, envía la selección a:
+
+```
+POST /competitors/confirm
+```
+
+```json
+{
+  "userId": "8ecd5e72-6277-4abf-a136-8a9100ff66ca",
+  "brandContainerId": "b6e...",
+  "approved": [ { "name": "Black+Decker", "url": "https://...", "confidence": 0.58 } ],
+  "manualAdds": [ { "name": "Universal", "url": "https://universal.com" } ]
+}
+```
+
+El servicio inserta/actualiza `intelligence_entities` y crea señales `competitor_confirmed` en `intelligence_signals`. Si el usuario decide revisar más tarde, basta con enviar `{ ..., "skip": true }`.
