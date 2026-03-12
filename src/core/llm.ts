@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import { ScrapedPage } from './scraper';
+import { BrandIdentity } from '../extractors/identity';
+import { CompetitorSuggestion } from '../types/intelligence';
 
 dotenv.config();
 
@@ -37,6 +39,10 @@ export interface BrandAnalysis {
 }
 
 export class LLMService {
+    isAvailable() {
+        return !!openai;
+    }
+
     async analyzeBrand(page: ScrapedPage): Promise<BrandAnalysis | null> {
         if (!openai) {
             console.warn('OPENAI_API_KEY not found. Skipping LLM analysis.');
@@ -98,4 +104,59 @@ export class LLMService {
             return null;
         }
     }
+
+    async rankCompetitors(page: ScrapedPage, identity: BrandIdentity, candidates: CompetitorSuggestion[]): Promise<CompetitorSuggestion[]> {
+        if (!openai || !candidates.length) return [];
+
+        const summary = candidates
+            .slice(0, 12)
+            .map((c, idx) => `${idx + 1}. ${c.name} - ${c.url} (confidence ${(c.confidence ?? 0).toFixed(2)})`)
+            .join('\n');
+        const truncatedText = page.text.substring(0, 6000);
+
+        const prompt = [
+            `Analiza la marca "${identity.name}" y decide cuáles de las siguientes empresas parecen ser competidores directos.`,
+            '',
+            'Contenido del sitio (truncado):',
+            truncatedText,
+            '',
+            'Candidatos propuestos:',
+            summary,
+            '',
+            'Devuelve un JSON array con máximo 6 objetos con esta forma: [{ "name": "Competidor", "url": "https://competidor.com", "confidence": 0.0-1.0, "reason": "breve explicación" }]',
+            'Solo incluye marcas reales del mismo mercado y no repitas la marca principal.'
+        ].join('\n');
+
+        try {
+            const completion = await openai.chat.completions.create({
+                messages: [{ role: 'user', content: prompt }],
+                model: 'gpt-4o-mini',
+                response_format: { type: 'json_object' }
+            });
+            const content = completion.choices[0].message.content;
+            if (!content) return [];
+            const parsed = JSON.parse(content);
+            const items = Array.isArray(parsed) ? parsed : parsed.results || parsed.suggestions || parsed.data || [];
+            if (!Array.isArray(items)) return [];
+            return items
+                .map((item: any): CompetitorSuggestion | null => {
+                    if (!item?.name || !item?.url) return null;
+                    const confidence = Number(item.confidence ?? 0.7);
+                    return {
+                        name: String(item.name),
+                        url: String(item.url),
+                        source: 'llm',
+                        reason: item.reason || item.explanation || 'Identificado por LLM',
+                        confidence: Math.min(1, Math.max(0, isNaN(confidence) ? 0.7 : confidence)),
+                        detectedBy: 'llm'
+                    };
+                })
+                .filter((item): item is CompetitorSuggestion => Boolean(item));
+        } catch (error) {
+            console.error('LLM competitor ranking failed:', error);
+            return [];
+        }
+    }
+
+
 }

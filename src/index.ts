@@ -4,6 +4,7 @@ import { LLMService } from './core/llm';
 import { DataMapper } from './core/mapper';
 import { supabase } from './core/database';
 import { OrganizationService } from './core/organization';
+import { CompetitionDetector } from './core/competition';
 
 async function main() {
     const url = process.argv[2];
@@ -23,6 +24,7 @@ async function main() {
     const llmService = new LLMService();
     const mapper = new DataMapper(supabase);
     const orgService = new OrganizationService(supabase);
+    const competitionDetector = new CompetitionDetector(llmService);
 
     try {
         await scraper.init();
@@ -36,6 +38,17 @@ async function main() {
         console.log('\n--- Brand Identity ---');
         console.log('Name:', identity.name);
         console.log('Logo:', identity.logoUrl);
+
+        const competitors = await competitionDetector.suggestCompetitors(result, identity);
+
+        console.log('\n--- Competitor Candidates (beta) ---');
+        if (competitors.length) {
+            competitors.slice(0, 6).forEach((comp, idx) => {
+                console.log(`${idx + 1}. ${comp.name} -> ${comp.url} (${(comp.confidence * 100).toFixed(0)}% via ${comp.detectedBy})`);
+            });
+        } else {
+            console.log('No competitor suggestions yet.');
+        }
 
         // LLM Analysis
         console.log('\n--- AI Analysis ---');

@@ -9,6 +9,7 @@ export interface ScrapedPage {
     html: string;
     text: string;
     links: string[];
+    linkDetails: { url: string; text: string }[];
     images: { src: string; alt: string }[];
     socialLinks: string[];
 }
@@ -60,12 +61,15 @@ export class ScraperEngine {
 
         // Links (internal and external)
         const links = new Set<string>();
+        const linkDetails: Array<{ url: string; text: string }> = [];
         $('a').each((_, el) => {
             const href = $(el).attr('href');
+            const textContent = $(el).text().replace(/\s+/g, ' ').trim();
             if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
                 try {
                     const absoluteUrl = new URL(href, url).href;
                     links.add(absoluteUrl);
+                    linkDetails.push({ url: absoluteUrl, text: textContent });
                 } catch (e) {
                     // Ignore invalid URLs
                 }
@@ -99,6 +103,7 @@ export class ScraperEngine {
             html,
             text,
             links: Array.from(links),
+            linkDetails,
             images,
             socialLinks
         };
