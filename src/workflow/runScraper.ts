@@ -14,6 +14,7 @@ export interface RunScraperParams {
     organizationName: string;
     plan?: string;
     environment?: string;
+    organizationInput?: Record<string, any> | null;
     logger?: (message: string) => void;
 }
 
@@ -95,7 +96,8 @@ export async function runScraper(params: RunScraperParams): Promise<ScraperRespo
                 userId,
                 scrapedAt: new Date().toISOString(),
                 scrapedUrl: url,
-                environment
+                environment,
+                inputSnapshot: params.organizationInput || null
             }
         };
     } catch (error) {
@@ -125,7 +127,8 @@ export async function runScraper(params: RunScraperParams): Promise<ScraperRespo
                 userId,
                 scrapedAt: new Date().toISOString(),
                 scrapedUrl: url,
-                environment
+                environment,
+                inputSnapshot: params.organizationInput || null
             }
         };
     } finally {

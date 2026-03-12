@@ -23,5 +23,6 @@ export interface ScraperResponse {
         scrapedAt: string;
         scrapedUrl: string;
         environment: string;
+        inputSnapshot?: Record<string, any> | null;
     };
 }

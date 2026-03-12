@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import { runScraper } from './workflow/runScraper';
@@ -9,13 +10,15 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(express.json({ limit: '2mb' }));
+app.use(cors());
 
 const scrapeSchema = z.object({
     url: z.string().url(),
     userId: z.string().min(1),
     organizationName: z.string().min(1),
     plan: z.string().optional(),
-    environment: z.string().optional()
+    environment: z.string().optional(),
+    organizationInput: z.record(z.string(), z.any()).optional()
 });
 
 app.get('/health', (_req, res) => {
@@ -33,7 +36,12 @@ app.post('/scrape', async (req, res) => {
 
     try {
         const response = await runScraper({
-            ...parsed.data,
+            url: parsed.data.url,
+            userId: parsed.data.userId,
+            organizationName: parsed.data.organizationName,
+            plan: parsed.data.plan,
+            environment: parsed.data.environment,
+            organizationInput: parsed.data.organizationInput,
             logger: (msg) => console.log(`[api] ${msg}`)
         });
         res.json(response);
