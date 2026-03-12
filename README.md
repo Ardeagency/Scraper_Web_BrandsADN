@@ -69,3 +69,26 @@ After each run the CLI prints a JSON block like:
 
 The frontend/webhook can parse this block to show the "¿Esta es tu competencia?" step before triggering deeper scraping.
 
+
+
+## HTTP Service (Webhook Friendly)
+
+You can also run the scraper as an HTTP service:
+
+```bash
+npm run start:server
+```
+
+POST `http://localhost:4000/scrape` with JSON body:
+
+```json
+{
+  "url": "https://www.ostercolombia.com/",
+  "userId": "8ecd5e72-6277-4abf-a136-8a9100ff66ca",
+  "organizationName": "Oster LATAM",
+  "plan": "pro"
+}
+```
+
+The response is the same `ScraperResponse` payload shown arriba, listo para que el frontend pregunte “¿Esta es tu competencia?” y luego confirme la selección.
+```
