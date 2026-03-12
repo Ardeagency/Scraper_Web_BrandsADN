@@ -6,7 +6,9 @@ This system automates the extraction of brand identity and strategy from a given
 - **Scraping**: Uses Playwright to render pages and Cheerio to extract metadata, links, and images.
 - **Identity Extraction**: Heuristics to find Brand Name, Logo, and Social Media links.
 - **AI Analysis**: Uses OpenAI (GPT-4) to analyze page text and determine Brand Archetype, Tone of Voice, Audience segments, and more.
+- **Competitor Radar**: Detects competitor candidates via heuristics + LLM re-ranking, returning a structured list for human confirmation.
 - **Database Integration**: Saves all extracted data into Supabase, populating `brand_containers`, `brands`, `audiences`, and `brand_social_links`.
+- **JSON Output**: Every run produces a `ScraperResponse` payload (status + organization + competitors) ready for webhook consumption.
 
 ## Setup
 
@@ -46,3 +48,24 @@ npm start -- https://www.ostercolombia.com/ "user-uuid-here" "Oster LATAM" pro
 - `src/core/llm.ts`: Handles communication with OpenAI.
 - `src/core/mapper.ts`: Maps data to Supabase schema.
 - `src/extractors/`: Specific logic for extracting identity elements.
+
+After each run the CLI prints a JSON block like:
+
+```json
+{
+  "status": "needs_confirmation",
+  "organization": {
+    "name": "Oster",
+    "website": "https://www.ostercolombia.com/",
+    "plan": "pro",
+    "brandContainerId": "..."
+  },
+  "competitors": [
+    { "name": "Black+Decker", "url": "https://www.blackanddeckerappliances.com/", "confidence": 0.58 }
+  ],
+  "meta": { "source": "cli", "scrapedAt": "2026-03-10T22:40:00Z" }
+}
+```
+
+The frontend/webhook can parse this block to show the "¿Esta es tu competencia?" step before triggering deeper scraping.
+

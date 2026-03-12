@@ -1,10 +1,12 @@
 import { ScraperEngine } from './core/scraper';
-import { IdentityExtractor } from './extractors/identity';
-import { LLMService } from './core/llm';
+import { IdentityExtractor, BrandIdentity } from './extractors/identity';
+import { LLMService, BrandAnalysis } from './core/llm';
 import { DataMapper } from './core/mapper';
 import { supabase } from './core/database';
 import { OrganizationService } from './core/organization';
 import { CompetitionDetector } from './core/competition';
+import { ScraperResponse, OnboardingStatus } from './types/onboarding';
+import { CompetitorSuggestion } from './types/intelligence';
 
 async function main() {
     const url = process.argv[2];
@@ -26,6 +28,13 @@ async function main() {
     const orgService = new OrganizationService(supabase);
     const competitionDetector = new CompetitionDetector(llmService);
 
+    const collectorErrors: string[] = [];
+    let organizationId: string | null = null;
+    let containerId: string | null = null;
+    let identity: BrandIdentity | null = null;
+    let analysis: BrandAnalysis | null = null;
+    let competitors: CompetitorSuggestion[] = [];
+
     try {
         await scraper.init();
         const result = await scraper.scrapePage(url);
@@ -33,13 +42,13 @@ async function main() {
 
         // Extract Identity
         const identityExtractor = new IdentityExtractor();
-        const identity = identityExtractor.extract(result);
+        identity = identityExtractor.extract(result);
 
         console.log('\n--- Brand Identity ---');
         console.log('Name:', identity.name);
         console.log('Logo:', identity.logoUrl);
 
-        const competitors = await competitionDetector.suggestCompetitors(result, identity);
+        competitors = await competitionDetector.suggestCompetitors(result, identity);
 
         console.log('\n--- Competitor Candidates (beta) ---');
         if (competitors.length) {
@@ -52,7 +61,7 @@ async function main() {
 
         // LLM Analysis
         console.log('\n--- AI Analysis ---');
-        const analysis = await llmService.analyzeBrand(result);
+        analysis = await llmService.analyzeBrand(result);
 
         if (analysis) {
             console.log('Archetype:', analysis.brandDetails.personalityArchetype);
@@ -64,15 +73,73 @@ async function main() {
         // Save to DB
         console.log('\n--- Saving to Database ---');
         try {
-            const { organizationId } = await orgService.ensureOrganization(userId, organizationName, plan);
-            const containerId = await mapper.saveBrandData(organizationId, userId, url, identity, analysis);
+            const ensured = await orgService.ensureOrganization(userId, organizationName, plan);
+            organizationId = ensured.organizationId;
+            containerId = await mapper.saveBrandData(organizationId, userId, url, identity, analysis);
             console.log(`Successfully saved data! Container ID: ${containerId}`);
         } catch (e: any) {
-            console.error('Failed to save to DB:', e.message);
+            const message = e?.message || 'Unknown error';
+            collectorErrors.push(message);
+            console.error('Failed to save to DB:', message);
         }
+
+        const status: OnboardingStatus = collectorErrors.length
+            ? 'error'
+            : (competitors.length ? 'needs_confirmation' : 'saved_without_competitors');
+
+        const response: ScraperResponse = {
+            status,
+            organization: {
+                name: identity.name,
+                website: url,
+                plan,
+                identity,
+                analysis,
+                organizationId,
+                brandContainerId: containerId
+            },
+            competitors,
+            errors: collectorErrors.length ? collectorErrors : undefined,
+            meta: {
+                source: 'cli',
+                userId,
+                scrapedAt: new Date().toISOString(),
+                scrapedUrl: url,
+                environment: plan
+            }
+        };
+
+        console.log('\n--- Scraper JSON Response ---');
+        console.log(JSON.stringify(response, null, 2));
 
     } catch (error) {
         console.error('Error during execution:', error);
+        const fallback: ScraperResponse = {
+            status: 'error',
+            organization: {
+                name: organizationName,
+                website: url,
+                plan,
+                identity: identity || {
+                    name: organizationName,
+                    logoUrl: undefined,
+                    socialLinks: [],
+                    colors: [],
+                    variants: []
+                }
+            },
+            competitors: [],
+            errors: [error instanceof Error ? error.message : 'Unknown error'],
+            meta: {
+                source: 'cli',
+                userId,
+                scrapedAt: new Date().toISOString(),
+                scrapedUrl: url,
+                environment: plan
+            }
+        };
+        console.log('\n--- Scraper JSON Response ---');
+        console.log(JSON.stringify(fallback, null, 2));
     } finally {
         await scraper.close();
     }
