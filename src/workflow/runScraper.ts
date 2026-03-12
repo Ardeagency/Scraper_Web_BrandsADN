@@ -1,4 +1,4 @@
-import { ScraperEngine } from '../core/scraper';
+import { ScraperEngine, CrawlSummary } from '../core/scraper';
 import { IdentityExtractor, BrandIdentity } from '../extractors/identity';
 import { LLMService, BrandAnalysis } from '../core/llm';
 import { DataMapper } from '../core/mapper';
@@ -42,6 +42,7 @@ export async function runScraper(params: RunScraperParams): Promise<ScraperRespo
     let identity: BrandIdentity | null = null;
     let analysis: BrandAnalysis | null = null;
     let competitors: CompetitorSuggestion[] = [];
+    let crawlResult: { pages: CrawlSummary[]; newPages: CrawlSummary[] } | null = null;
 
     try {
         logger(`Initializing scraper for ${url}`);
@@ -55,6 +56,9 @@ export async function runScraper(params: RunScraperParams): Promise<ScraperRespo
 
         competitors = await competitionDetector.suggestCompetitors(result, identity);
         logger(`Found ${competitors.length} competitor candidates`);
+
+        crawlResult = await scraper.crawlSite(url, { maxPages: 20, maxDepth: 2 });
+        logger(`Crawled ${crawlResult.pages.length} internal pages (new: ${crawlResult.newPages.length})`);
 
         analysis = await llmService.analyzeBrand(result);
         if (analysis) {
@@ -97,6 +101,10 @@ export async function runScraper(params: RunScraperParams): Promise<ScraperRespo
                 scrapedAt: new Date().toISOString(),
                 scrapedUrl: url,
                 environment,
+                crawl: crawlResult ? {
+                    totalPages: crawlResult.pages.length,
+                    newPages: crawlResult.newPages
+                } : null,
                 inputSnapshot: params.organizationInput || null
             }
         };
@@ -128,6 +136,7 @@ export async function runScraper(params: RunScraperParams): Promise<ScraperRespo
                 scrapedAt: new Date().toISOString(),
                 scrapedUrl: url,
                 environment,
+                crawl: null,
                 inputSnapshot: params.organizationInput || null
             }
         };

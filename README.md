@@ -3,6 +3,7 @@
 This system automates the extraction of brand identity and strategy from a given website URL.
 
 ## Features
+- **Resilient crawling**: Two-level internal crawler with checkpoints; detects nuevas páginas internas y genera deltas para el dashboard.
 - **Scraping**: Uses Playwright to render pages and Cheerio to extract metadata, links, and images.
 - **Identity Extraction**: Heuristics to find Brand Name, Logo, and Social Media links.
 - **AI Analysis**: Uses OpenAI (GPT-4) to analyze page text and determine Brand Archetype, Tone of Voice, Audience segments, and more.

@@ -1,6 +1,7 @@
 import { BrandIdentity } from '../extractors/identity';
 import { BrandAnalysis } from '../core/llm';
 import { CompetitorSuggestion } from './intelligence';
+import { CrawlSummary } from '../core/scraper';
 
 export type OnboardingStatus = 'needs_confirmation' | 'saved_without_competitors' | 'error';
 
@@ -23,6 +24,7 @@ export interface ScraperResponse {
         scrapedAt: string;
         scrapedUrl: string;
         environment: string;
+        crawl?: { totalPages: number; newPages: CrawlSummary[] } | null;
         inputSnapshot?: Record<string, any> | null;
     };
 }
