@@ -112,3 +112,19 @@ POST /competitors/confirm
 ```
 
 El servicio inserta/actualiza `intelligence_entities` y crea señales `competitor_confirmed` en `intelligence_signals`. Si el usuario decide revisar más tarde, basta con enviar `{ ..., "skip": true }`.
+
+### Instagram snapshot
+
+```
+POST /social/instagram
+```
+
+```json
+{
+  "username": "nike",
+  "brandContainerId": "...",
+  "userId": "8ecd..."
+}
+```
+
+Devuelve los últimos posts, métricas y resumen del perfil. Si se pasa `brandContainerId`, también se registra la señal `instagram_snapshot` en Supabase.

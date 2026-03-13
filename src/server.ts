@@ -3,6 +3,7 @@ import cors from 'cors';
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import { runScraper } from './workflow/runScraper';
+import { InstagramCollector, InstagramSignalService } from './social/instagram';
 import { CompetitorConfirmationService } from './workflow/confirmCompetitors';
 
 dotenv.config();
@@ -47,6 +48,11 @@ const confirmSchema = z.object({
         url: z.string().url()
     })).optional(),
     skip: z.boolean().optional()
+});
+const instagramSchema = z.object({
+    username: z.string().min(1),
+    brandContainerId: z.string().uuid().optional(),
+    userId: z.string().min(1).optional()
 });
 
 app.get('/health', (_req, res) => {
